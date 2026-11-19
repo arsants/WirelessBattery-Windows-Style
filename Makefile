@@ -25,6 +25,10 @@ clean:
 
 test:
 	@mkdir -p build
+	$(CXX) $(CXXFLAGS) -DUNICODE tests/display_state_test.cpp -o build/display_state_test.exe -lcomctl32 -lgdi32
+	./build/display_state_test.exe
+	$(CXX) $(CXXFLAGS) tests/keyboard_driver_test.cpp src/drivers/keyboards.cpp -o build/keyboard_driver_test.exe
+	./build/keyboard_driver_test.exe
 	$(CXX) -std=c++17 -O2 -Wall tests/rapoo_protocol_test.cpp -o build/rapoo_protocol_test.exe
 	./build/rapoo_protocol_test.exe
 	$(CXX) $(CXXFLAGS) tests/rapoo_driver_test.cpp src/drivers/rapoo.cpp -o build/rapoo_driver_test.exe

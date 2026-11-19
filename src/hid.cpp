@@ -167,7 +167,8 @@ DeviceKind GuessKind(const std::wstring& name) {
     for (auto& ch : n) ch = towlower(ch);
     auto has = [&](const wchar_t* s) { return n.find(s) != std::wstring::npos; };
     if (has(L"mouse") || has(L"mice") || has(L"trackball")) return DeviceKind::Mouse;
-    if (has(L"keyboard") || has(L"keys")) return DeviceKind::Keyboard;
+    if (has(L"keyboard") || has(L"keys") || has(L"ak820") || has(L"flow lite84") || has(L"flow84-l"))
+        return DeviceKind::Keyboard;
     if (has(L"controller") || has(L"gamepad") || has(L"xbox") || has(L"dualsense") || has(L"dualshock") || has(L"joy-con"))
         return DeviceKind::Gamepad;
     if (has(L"head") || has(L"buds") || has(L"pods") || has(L"ear") || has(L"wh-") || has(L"wf-") || has(L"audio") ||

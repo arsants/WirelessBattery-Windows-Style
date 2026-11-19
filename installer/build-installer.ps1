@@ -1,6 +1,6 @@
 # Builds dist\WirelessBattery-Setup-<version>.exe and dist\WirelessBattery-<version>-portable.zip.
 # Needs: WirelessBattery.exe already built (make / build.bat) and Inno Setup 6 or 7 installed.
-param([string]$Version = "1.0.0")
+param([string]$Version = "1.0.4.4")
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
@@ -33,9 +33,16 @@ if ($LASTEXITCODE -ne 0) { throw "ISCC failed." }
 
 # Portable zip: same files, no installer.
 $stage = Join-Path $root "build\portable"
+$resolvedStage = [IO.Path]::GetFullPath($stage)
+$expectedStage = [IO.Path]::GetFullPath((Join-Path $root "build\portable"))
+if ($resolvedStage -ne $expectedStage -or -not $resolvedStage.StartsWith([IO.Path]::GetFullPath($root) + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "Portable staging directory is outside the project."
+}
 Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $stage | Out-Null
 Copy-Item WirelessBattery.exe, $hscExe, installer\THIRD_PARTY_NOTICES.txt $stage
 Copy-Item LICENSE (Join-Path $stage "LICENSE.txt")
-Compress-Archive -Path "$stage\*" -DestinationPath "dist\WirelessBattery-$Version-portable.zip" -Force
-Write-Host "Done: dist\WirelessBattery-Setup-$Version.exe and dist\WirelessBattery-$Version-portable.zip"
+Copy-Item installer\README-AJAZZ.txt (Join-Path $stage "README.txt")
+New-Item -ItemType Directory -Force (Join-Path $root "dist") | Out-Null
+Compress-Archive -Path "$stage\*" -DestinationPath "dist\WirelessBattery-WindowsStyle-$Version-portable.zip" -Force
+Write-Host "Done: dist\WirelessBattery-WindowsStyle-Setup-$Version.exe and dist\WirelessBattery-WindowsStyle-$Version-portable.zip"

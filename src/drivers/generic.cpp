@@ -12,6 +12,8 @@
 
 #include <cstring>
 #include <map>
+#include <algorithm>
+#include <cwctype>
 
 namespace {
 
@@ -175,6 +177,25 @@ void PollBluetooth(PollContext& ctx) {
         auto cod = containerCod.find(cid);
         s.kind = cod != containerCod.end() ? KindFromClassOfDevice(cod->second) : DeviceKind::Other;
         if (s.kind == DeviceKind::Other) s.kind = GuessKind(s.name);
+        // The same physical keyboard can leave its USB receiver plugged in while
+        // connected over Bluetooth. Prefer this live battery reading over the
+        // receiver's unknown/offline entry, with one stable icon across transports.
+        std::wstring lower = s.name;
+        for (auto& ch : lower) ch = towlower(ch);
+        if (lower.rfind(L"ak820 5.1-", 0) == 0 || lower.rfind(L"ak820 3.0-", 0) == 0) {
+            s.key = L"keyboard:0C45:FDFD";
+            s.name = L"AJAZZ AK820 Pro";
+            s.kind = DeviceKind::Keyboard;
+        } else if (lower.rfind(L"flow lite84", 0) == 0 || lower.rfind(L"flow84-l", 0) == 0) {
+            s.key = L"keyboard:05AC:024F";
+            s.name = L"Lofree Flow Lite84";
+            s.kind = DeviceKind::Keyboard;
+        }
+        auto existing = std::find_if(ctx.out.begin(), ctx.out.end(), [&](const DeviceStatus& o) { return o.key == s.key; });
+        if (existing != ctx.out.end()) {
+            *existing = s;
+            continue;
+        }
         ctx.out.push_back(s);
     }
 }

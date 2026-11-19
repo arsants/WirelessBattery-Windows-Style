@@ -252,7 +252,7 @@ std::wstring StatusText(const TrayEntry& e) {
     const auto& s = e.st;
     if (!s.connected) return L"off / not connected";
     std::wstring t;
-    if (!s.levelText.empty() && s.percent >= 0) t = s.levelText;
+    if (!s.levelText.empty()) t = s.levelText;
     else if (s.percent >= 0) t = std::to_wstring(s.percent) + L"%";
     else if (e.lastPct >= 0) t = std::to_wstring(e.lastPct) + L"% (last known)";
     else t = L"unknown";
@@ -315,7 +315,7 @@ void ApplyEntry(TrayEntry& e) {
         return;
     }
     int shown = s.percent >= 0 ? s.percent : e.lastPct;
-    bool dim = s.percent < 0;
+    bool dim = s.asleep || shown < 0;
     std::wstring sig = std::to_wstring(shown) + (s.charging ? L"c" : L"") + (dim ? L"d" : L"") + (g_lightTaskbar ? L"l" : L"k");
     if (sig != e.iconSig || !e.icon) {
         if (e.icon) DestroyIcon(e.icon);
@@ -361,9 +361,9 @@ void UpdateWidget() {
         WidgetItem it;
         it.kind = e->st.kind;
         it.percent = e->st.percent >= 0 ? e->st.percent : e->lastPct;
-        if (e->st.percent >= 0) it.text = e->st.levelText;
+        it.text = e->st.levelText;
         it.charging = e->st.charging;
-        it.dim = e->st.percent < 0;
+        it.dim = e->st.asleep || (it.percent < 0 && it.text.empty());
         it.low = !it.charging && it.percent >= 0 && it.percent <= LOW_BATTERY;
         it.bluetooth = e->st.via == L"Bluetooth";
         items.push_back(it);
@@ -387,12 +387,14 @@ void OnResults(std::vector<DeviceStatus>& results) {
     }
     for (auto it = g_entries.begin(); it != g_entries.end();) {
         auto& e = it->second;
-        // Some receivers drop sleeping devices from the link; keep showing the last value for a while.
+        // A missed battery query does not establish sleep: receivers can time out
+        // even while the mouse is in use. Retain the last value without inventing
+        // an asleep state; only a driver can explicitly report that state.
         bool inGrace = !seen.count(it->first) && e.st.graceSec > 0 && e.st.connected &&
                        GetTickCount64() - e.lastSeen < (ULONGLONG)e.st.graceSec * 1000;
         if (inGrace) {
             e.st.percent = -1;
-            e.st.asleep = true;
+            e.st.levelText.clear();
             ApplyEntry(e);
         }
         if (!seen.count(it->first) && !inGrace) {

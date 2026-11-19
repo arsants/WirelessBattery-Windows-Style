@@ -4,17 +4,17 @@
 ; Build with installer\build-installer.ps1 (or: ISCC /DAppVersion=1.2.3 installer\WirelessBattery.iss).
 
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.0.4.4"
 #endif
 #define Root ".."
 
 [Setup]
-AppId={{7E0B5C2A-3F4D-4C8E-9B61-2D5A8F1C4E93}
-AppName=Wireless Battery
+AppId={{94C9E086-B026-4D0E-AC3F-21F39E49A2D2}
+AppName=Wireless Battery Windows Style
 AppVersion={#AppVersion}
-AppVerName=Wireless Battery {#AppVersion}
-AppPublisher=Wireless Battery contributors
-DefaultDirName={autopf}\Wireless Battery
+AppVerName=Wireless Battery Windows Style {#AppVersion}
+AppPublisher=Wireless Battery contributors - Windows Style fork
+DefaultDirName={autopf}\Wireless Battery Windows Style
 DisableProgramGroupPage=yes
 DisableDirPage=auto
 PrivilegesRequired=lowest
@@ -23,10 +23,10 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 OutputDir={#Root}\dist
-OutputBaseFilename=WirelessBattery-Setup-{#AppVersion}
+OutputBaseFilename=WirelessBattery-WindowsStyle-Setup-{#AppVersion}
 SetupIconFile={#Root}\res\app.ico
 UninstallDisplayIcon={app}\WirelessBattery.exe
-UninstallDisplayName=Wireless Battery
+UninstallDisplayName=Wireless Battery Windows Style
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -40,9 +40,10 @@ Source: "{#Root}\WirelessBattery.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\third_party\headsetcontrol\headsetcontrol.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 Source: "{#Root}\installer\THIRD_PARTY_NOTICES.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Root}\installer\README-AJAZZ.txt"; DestDir: "{app}"; DestName: "README.txt"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\Wireless Battery"; Filename: "{app}\WirelessBattery.exe"
+Name: "{autoprograms}\Wireless Battery Windows Style"; Filename: "{app}\WirelessBattery.exe"
 
 [Run]
 Filename: "{app}\WirelessBattery.exe"; Description: "Start Wireless Battery now"; Flags: nowait postinstall skipifsilent

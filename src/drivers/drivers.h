@@ -42,6 +42,7 @@ const wchar_t* GWolvesModelName(USHORT pid);
 bool GWolvesIsCable(USHORT pid);
 
 // Vendor drivers (run in this order).
+void PollKeyboards(PollContext& ctx);
 void PollGlorious(PollContext& ctx);  // also Hitscan
 void PollAula(PollContext& ctx);      // AULA F75 / F87 Pro / F99 wireless keyboards (before Kysona, same vendor id)
 void PollAtkSerial(PollContext& ctx); // ATK N9 Pro headset (virtual COM port)

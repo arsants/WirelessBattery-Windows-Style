@@ -5,6 +5,13 @@
 //     headsets plugged into a controller.
 #include "drivers.h"
 
+// Some MinGW-w64 headers specialize IReference for both BYTE and boolean,
+// which are the same unsigned-char type there. This driver uses only integer
+// battery references, so omit the unused duplicate boolean specialization.
+#ifdef __MINGW32__
+#define ____FIReference_1_boolean_INTERFACE_DEFINED__
+#endif
+
 #include <roapi.h>
 #include <winstring.h>
 #include <xinput.h>

@@ -3,5 +3,7 @@ build/
 *.o
 dist/
 third_party/
+research/
+drafts/
 .claude/
 CLAUDE.md

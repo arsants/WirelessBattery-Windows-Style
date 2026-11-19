@@ -1,20 +1,19 @@
-name: build
+name: Build and test
 
 on:
   push:
-    branches: [main]
-    tags: ["v*"]
+    branches: [windows-style]
   pull_request:
+  workflow_dispatch:
 
-# Read-only by default: builds of pull requests cannot change the repository or releases.
 permissions:
   contents: read
 
 jobs:
   build:
+    name: Windows x64 · tests and packages
     runs-on: windows-latest
     steps:
-      # Actions are pinned to exact commits so a moved tag cannot swap in different code.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2
@@ -22,47 +21,40 @@ jobs:
           msystem: MINGW64
           install: mingw-w64-x86_64-gcc make
 
-      - name: Build WirelessBattery.exe
+      - name: Build application
         shell: msys2 {0}
         run: make
 
-      - name: Test Rapoo protocol and driver
+      - name: Test display state, keyboard drivers and Rapoo
         shell: msys2 {0}
         run: make test
 
-      - name: Install Inno Setup
+      - name: Install Inno Setup compiler
         shell: pwsh
         run: choco install innosetup --no-progress -y
 
-      - name: Build installer and portable zip
+      - name: Build installer and portable ZIP
         shell: pwsh
         run: |
-          $version = if ($env:GITHUB_REF -like 'refs/tags/v*') { $env:GITHUB_REF_NAME.Substring(1) } else { '0.0.0' }
+          $version = (Get-Content VERSION -Raw).Trim()
           ./installer/build-installer.ps1 -Version $version
 
-      - name: Fetch HeadsetControl source (GPL corresponding source for the bundled binary)
+      - name: Include HeadsetControl corresponding source
         shell: pwsh
         run: |
           Invoke-WebRequest https://github.com/Sapd/HeadsetControl/releases/download/4.3.0/headsetcontrol-4.3.0.tar.gz -OutFile dist/headsetcontrol-4.3.0.tar.gz
-          if ((Get-FileHash dist/headsetcontrol-4.3.0.tar.gz -Algorithm SHA256).Hash -ne '918dcacf8aef347744b36b2d259d76880fa64b3869f0f8ef26b6576b873d28a7') { throw 'checksum mismatch' }
+          if ((Get-FileHash dist/headsetcontrol-4.3.0.tar.gz -Algorithm SHA256).Hash -ne '918dcacf8aef347744b36b2d259d76880fa64b3869f0f8ef26b6576b873d28a7') { throw 'Source checksum mismatch' }
+
+      - name: Generate release checksums
+        shell: pwsh
+        run: |
+          $lines = Get-ChildItem dist -File | Sort-Object Name | ForEach-Object {
+            '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name
+          }
+          $lines | Set-Content dist/SHA256SUMS.txt -Encoding ascii
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: WirelessBattery
+          name: WirelessBattery-WindowsStyle
           path: dist/*
-
-  # Only this job can publish, and only for version tags pushed by the maintainer.
-  release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: WirelessBattery
-          path: dist
-      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          files: dist/*
+          if-no-files-found: error

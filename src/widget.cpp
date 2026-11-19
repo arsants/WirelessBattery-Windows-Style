@@ -2,6 +2,7 @@
 
 #include <commctrl.h>
 #include <algorithm>
+#include <cmath>
 
 namespace {
 
@@ -57,10 +58,79 @@ struct Mask {
     std::vector<BYTE> a;
 };
 
+// The user's outlined controller design, rasterized from vector paths at each DPI.
+// Keep the four D-pad bars and single large ring readable at taskbar sizes.
+Mask RenderGamepad(int width) {
+    struct Point { float x, y; };
+    struct Line { Point a, b; float radius; };
+    std::vector<Line> lines;
+    auto line = [&](Point a, Point b, float stroke) { lines.push_back({a,b,stroke/2}); };
+    auto curve = [&](Point a, Point b, Point c, Point d) {
+        Point last = a;
+        for (int i=1; i<=16; ++i) {
+            float t=i/16.f, u=1-t;
+            Point p{u*u*u*a.x+3*u*u*t*b.x+3*u*t*t*c.x+t*t*t*d.x,
+                    u*u*u*a.y+3*u*u*t*b.y+3*u*t*t*c.y+t*t*t*d.y};
+            line(last,p,.95f); last=p;
+        }
+    };
+    line({7.4f,5},{16.6f,5},.95f);
+    curve({16.6f,5},{19.3f,5},{20.5f,6.4f},{21.4f,9.5f});
+    curve({21.4f,9.5f},{22.3f,12.3f},{23,15.5f},{22.5f,17.4f});
+    curve({22.5f,17.4f},{22.1f,19},{20.5f,19.5f},{19.5f,18.3f});
+    line({19.5f,18.3f},{17.9f,15.8f},.95f);
+    curve({17.9f,15.8f},{17.5f,15.2f},{17.1f,14.9f},{16.4f,14.9f});
+    line({16.4f,14.9f},{7.6f,14.9f},.95f);
+    curve({7.6f,14.9f},{6.9f,14.9f},{6.5f,15.2f},{6.1f,15.8f});
+    line({6.1f,15.8f},{4.5f,18.3f},.95f);
+    curve({4.5f,18.3f},{3.5f,19.5f},{1.9f,19},{1.5f,17.4f});
+    curve({1.5f,17.4f},{1,15.5f},{1.7f,12.3f},{2.6f,9.5f});
+    curve({2.6f,9.5f},{3.5f,6.4f},{4.7f,5},{7.4f,5});
+    auto rect = [](Point p, float x0, float y0, float x1, float y1) {
+        return p.x>=x0 && p.x<=x1 && p.y>=y0 && p.y<=y1;
+    };
+    auto ring = [](Point p, Point c, float r, float stroke) {
+        float x=p.x-c.x,y=p.y-c.y;
+        return std::abs(std::sqrt(x*x+y*y)-r)<=stroke/2;
+    };
+    Mask m;
+    m.w=width; m.h=(width*16+12)/24; m.a.resize((size_t)m.w*m.h);
+    constexpr int samples=8;
+    for(int y=0;y<m.h;++y) for(int x=0;x<m.w;++x) {
+        int coverage=0;
+        for(int sy=0;sy<samples;++sy)for(int sx=0;sx<samples;++sx) {
+            Point p{(x+(sx+.5f)/samples)*24/width,4+(y+(sy+.5f)/samples)*24/width};
+            bool ink=ring(p,{17.5f,9.7f},1.7f,.85f)||
+                rect(p,4.6f,9.45f,6.45f,10.35f)||rect(p,7.55f,9.45f,9.4f,10.35f)||
+                rect(p,6.55f,7.3f,7.45f,9.15f)||rect(p,6.55f,10.65f,7.45f,12.5f);
+            for(const auto& l:lines) {
+                if(ink)break;
+                float vx=l.b.x-l.a.x,vy=l.b.y-l.a.y;
+                float t=std::max(0.f,std::min(1.f,((p.x-l.a.x)*vx+(p.y-l.a.y)*vy)/(vx*vx+vy*vy)));
+                float dx=p.x-l.a.x-t*vx,dy=p.y-l.a.y-t*vy;
+                ink=dx*dx+dy*dy<=l.radius*l.radius;
+            }
+            coverage+=ink;
+        }
+        m.a[y*m.w+x]=(BYTE)((coverage*255+samples*samples/2)/(samples*samples));
+    }
+    return m;
+}
+
 Mask RenderMask(const std::wstring& s, HFONT font) {
     Mask m;
+    // Render in grayscale at 4x resolution, then average coverage. This avoids
+    // jagged single-pixel edges on small Fluent glyphs at fractional DPI.
+    constexpr int renderScale = 4;
+    LOGFONTW lf{};
+    GetObjectW(font, sizeof(lf), &lf);
+    lf.lfHeight *= renderScale;
+    lf.lfWidth *= renderScale;
+    lf.lfQuality = ANTIALIASED_QUALITY;
+    HFONT largeFont = CreateFontIndirectW(&lf);
+    const int scale = largeFont ? renderScale : 1;
     HDC dc = CreateCompatibleDC(nullptr);
-    HGDIOBJ of = SelectObject(dc, font);
+    HGDIOBJ of = SelectObject(dc, largeFont ? largeFont : font);
     SIZE sz;
     GetTextExtentPoint32W(dc, s.c_str(), (int)s.size(), &sz);
     int W = sz.cx + 8, H = sz.cy + 8;
@@ -80,16 +150,25 @@ Mask RenderMask(const std::wstring& s, HFONT font) {
         for (int x = 0; x < W; x++)
             if (p[y * W + x] & 0xFF) { x0 = std::min(x0, x); x1 = std::max(x1, x); y0 = std::min(y0, y); y1 = std::max(y1, y); }
     if (x1 >= 0) {
-        m.w = x1 - x0 + 1;
-        m.h = y1 - y0 + 1;
+        m.w = (x1 - x0 + scale) / scale;
+        m.h = (y1 - y0 + scale) / scale;
         m.a.resize((size_t)m.w * m.h);
         for (int y = 0; y < m.h; y++)
-            for (int x = 0; x < m.w; x++) m.a[y * m.w + x] = (BYTE)(p[(y0 + y) * W + x0 + x] & 0xFF);
+            for (int x = 0; x < m.w; x++) {
+                unsigned coverage = 0;
+                for (int sy = 0; sy < scale; ++sy)
+                    for (int sx = 0; sx < scale; ++sx) {
+                        int px = x0 + x * scale + sx, py = y0 + y * scale + sy;
+                        if (px <= x1 && py <= y1) coverage += p[py * W + px] & 0xFF;
+                    }
+                m.a[y * m.w + x] = (BYTE)((coverage + scale * scale / 2) / (scale * scale));
+            }
     }
     SelectObject(dc, ob);
     SelectObject(dc, of);
     DeleteObject(bmp);
     DeleteDC(dc);
+    if (largeFont) DeleteObject(largeFont);
     return m;
 }
 
@@ -119,9 +198,9 @@ struct Canvas {
 struct Piece { Mask m; Rgb color; int alpha; int gapAfter; };
 
 std::vector<Piece> Layout(int& width) {
-    Rgb fg = g_light ? Rgb{ 0, 0, 0 } : Rgb{ 255, 255, 255 };
-    Rgb red = g_light ? Rgb{ 196, 30, 40 } : Rgb{ 255, 90, 90 };
-    Rgb charge = g_light ? Rgb{ 0, 120, 212 } : Rgb{ 96, 205, 255 };
+    Rgb fg = g_light ? Rgb{ 60, 60, 60 } : Rgb{ 220, 220, 220 };
+    Rgb red = g_light ? Rgb{ 180, 45, 50 } : Rgb{ 220, 110, 110 };
+    Rgb charge = g_light ? Rgb{ 45, 105, 155 } : Rgb{ 125, 175, 210 };
     HFONT icons = MakeFont(Px(16), FW_NORMAL, L"Segoe Fluent Icons", L"Segoe MDL2 Assets");
     HFONT bolt = MakeFont(Px(11), FW_NORMAL, L"Segoe Fluent Icons", L"Segoe MDL2 Assets");
     HFONT text = MakeFont(Px(13), FW_NORMAL, L"Segoe UI Variable Text", L"Segoe UI");
@@ -132,7 +211,9 @@ std::vector<Piece> Layout(int& width) {
         const auto& it = g_items[i];
         int a = it.dim ? 120 : 255;
         Rgb tc = it.low ? red : fg;
-        out.push_back({ RenderMask(std::wstring(1, Glyph(it.kind, it.bluetooth)), icons), fg, a, Px(5) });
+        Mask icon = it.kind == DeviceKind::Gamepad ? RenderGamepad(Px(20)) :
+                    RenderMask(std::wstring(1, Glyph(it.kind, it.bluetooth)), icons);
+        out.push_back({ std::move(icon), fg, a, Px(5) });
         std::wstring t = !it.text.empty() ? it.text : it.percent >= 0 ? std::to_wstring(it.percent) + L"%" : L"?";
         out.push_back({ RenderMask(t, text), tc, a, it.charging ? Px(2) : 0 });
         if (it.charging) out.push_back({ RenderMask(std::wstring(1, kBolt), bolt), charge, a, 0 });
