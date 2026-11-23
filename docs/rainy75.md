@@ -10,7 +10,7 @@ Rainy 75 Pro on their own. The expected cable PID is `320F:5055`.
 
 The existing application has no driver for this protocol.
 
-## Read-only protocol reference
+## Protocol reference (active queries disabled)
 
 [Rainy75Desktop battery implementation](https://github.com/zzixxxx/Rainy75Desktop/blob/main/battery.py)
 documents output report `04 20 00 1A 06`, zero-padded to 64 bytes.
@@ -19,26 +19,27 @@ Bytes 1–2 are a payload checksum, not a sequence number. A response to command
 The interpretation of byte 9 as charging is not hardware-verified.
 
 That project reports responses delayed by 5–12 seconds and warns that sending
-requests during typing can interfere with key release reports. Input-idle gating
-reduces that risk but does not prove polling is safe for every firmware.
+requests during typing can interfere with key release reports. Input-idle gating did not prevent an input-repeat incident on this user's device.
+Do not treat a battery query as harmless merely because it does not change settings.
 
 ## Results on this device
 
 - Receiver discovered and opened successfully.
 - No battery reply during a 15-second window with the documented request,
   including a check after the user woke the keyboard.
-- A later user message contained repeated text. Whether this was deliberate
-  typing or an input problem has not yet been confirmed. All queries stopped.
-- Cable-mode verification is pending. Do not advertise working Rainy battery
-  support or integrate background receiver polling without a valid response
-  and input-behavior verification.
+- The user confirmed unintended repeated keyboard input following these probes
+  and had to reboot the PC. No clipboard or input-injection APIs were used by
+  the diagnostic. The exact firmware failure mechanism is not established.
+  Active Rainy queries have been removed; do not run more hardware probes.
+- Cable-mode testing is cancelled following the input incident. Rainy battery
+  support remains unimplemented. Future research must be offline, using existing
+  captures or source analysis; no further live keyboard queries are authorized.
 - The installed WLMouse build is unchanged.
 
 ## Diagnostic
 
-`tests/evision_status.cpp` enumerates only by default. Compile with the existing
-MinGW-compatible toolchain and `src/hid.cpp`, linking `hid` and `setupapi`.
-`--battery` sends one documented battery query on the cable, after checking
-input idle time. It listens for at most 15 seconds and closes the handle.
-Receiver queries additionally require `--receiver`; there are no retransmits.
-No firmware, keymap, lighting, or pairing commands are sent.
+`tests/evision_status.cpp` only enumerates device descriptors. It contains no
+HID battery writes, reads, or polling loops. All command-line arguments,
+including the former `--battery` and `--receiver`, are rejected before enumeration.
+The previous diagnostic executable has been quarantined locally and must not
+be used. This utility is not included in the installed application or autostart.
