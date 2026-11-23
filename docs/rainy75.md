@@ -104,3 +104,19 @@ from the protocols exposed in WOB's driver. This is evidence from another unit,
 not an identification of the user's firmware. It supports avoiding an assumption
 that shared VID/PID and a request constant imply a functioning battery API.
 No existing verified battery response for the user's receiver has been obtained.
+
+## Bluetooth implementation
+
+Windows now reports the user's connected `Rainy 75-1` device and battery 91%
+through its existing Bluetooth PnP properties. No vendor HID query is involved.
+The generic Bluetooth driver normalizes supported Rainy 75 slot names to
+`WOBKEY Rainy 75` and sets the keyboard type. The model name does not claim Pro,
+since Rainy 75 Standard/Pro share these Bluetooth names.
+
+The existing Windows container key is preserved, including per-device visibility
+settings. Distinct containers are not merged. Existing connection filtering
+removes disconnected devices; no receiver grace period is applied to Bluetooth.
+Name/identity tests and a display-state disconnect/reconnect test cover this
+path. `tests/bluetooth_status.cpp` reads Windows properties only.
+
+The 2.4 GHz battery protocol remains unresolved and active probes remain disabled.

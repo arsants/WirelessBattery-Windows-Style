@@ -37,4 +37,7 @@ test:
 	$(CXX) $(CXXFLAGS) tests/wlmouse_driver_test.cpp src/drivers/wlmouse.cpp -o build/wlmouse_driver_test.exe
 	./build/wlmouse_driver_test.exe
 
+	$(CXX) $(CXXFLAGS) tests/bluetooth_keyboard_test.cpp -o build/bluetooth_keyboard_test.exe
+	./build/bluetooth_keyboard_test.exe
+
 .PHONY: clean test

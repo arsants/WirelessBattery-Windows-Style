@@ -4,6 +4,7 @@
 //  * Bluetooth devices: Windows keeps the level it reads over HFP (classic) or the GATT Battery
 //    Service (LE) in a device property, the same value Settings > Bluetooth & devices shows.
 #include "drivers.h"
+#include "bluetooth_keyboard.h"
 
 #include <setupapi.h>
 #include <cfgmgr32.h>
@@ -191,6 +192,7 @@ void PollBluetooth(PollContext& ctx) {
             s.name = L"Lofree Flow Lite84";
             s.kind = DeviceKind::Keyboard;
         }
+        NormalizeRainy75Bluetooth(s);
         auto existing = std::find_if(ctx.out.begin(), ctx.out.end(), [&](const DeviceStatus& o) { return o.key == s.key; });
         if (existing != ctx.out.end()) {
             *existing = s;

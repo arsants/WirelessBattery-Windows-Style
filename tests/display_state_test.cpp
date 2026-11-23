@@ -1,6 +1,7 @@
 // Exercise the production result/cache and display logic without touching the tray.
 #include "../src/main.cpp"
 #include <cassert>
+#include "../src/drivers/bluetooth_keyboard.h"
 
 static std::vector<WidgetItem> rendered;
 namespace widget {
@@ -61,5 +62,23 @@ int main() {
     assert(g_entries.size() == 1 && rendered.size() == 1 && rendered[0].percent == 88);
     assert(g_entries.at(mouse.key).uid == receiverUid);
     assert(StatusText(g_entries.at(mouse.key)) == L"88%");
+    // The real Rainy Bluetooth name used to fall back to the Bluetooth glyph.
+    g_entries.clear();
+    DeviceStatus rainy;
+    rainy.key = L"bt:rainy-container"; rainy.name = L"Rainy 75-1";
+    rainy.via = L"Bluetooth"; rainy.percent = 91;
+    NormalizeRainy75Bluetooth(rainy);
+    results = {rainy}; OnResults(results);
+    assert(rendered.size() == 1 && rendered[0].kind == DeviceKind::Keyboard);
+    assert(rendered[0].percent == 91 && !rendered[0].dim && !rendered[0].charging);
+    assert(g_entries.at(rainy.key).st.name == L"WOBKEY Rainy 75");
+    const auto rainyUid = g_entries.at(rainy.key).uid;
+    rainy.percent = 90; results = {rainy}; OnResults(results);
+    assert(rendered.size() == 1 && rendered[0].percent == 90);
+    assert(g_entries.at(rainy.key).uid == rainyUid);
+    results.clear(); OnResults(results); // Disconnected BT must not linger as live.
+    assert(g_entries.empty() && rendered.empty());
+    results = {rainy}; OnResults(results); // Reconnect with the same identity.
+    assert(rendered.size() == 1 && g_entries.at(rainy.key).uid == rainyUid);
     puts("Display state passed: cached level stays normal, explicit sleep dims, refresh recovers, expired entries disappear.");
 }
