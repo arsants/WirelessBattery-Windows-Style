@@ -32,8 +32,8 @@ Do not treat a battery query as harmless merely because it does not change setti
   the diagnostic. The exact firmware failure mechanism is not established.
   Active Rainy queries have been removed; do not run more hardware probes.
 - Cable-mode testing is cancelled following the input incident. Rainy battery
-  support remains unimplemented. Future research must be offline, using existing
-  captures or source analysis; no further live keyboard queries are authorized.
+  support was left unimplemented. Live probing was disabled after the incident;
+  see the later, explicitly authorized limited retry below.
 - The installed WLMouse build is unchanged.
 
 ## Diagnostic
@@ -120,3 +120,31 @@ Name/identity tests and a display-state disconnect/reconnect test cover this
 path. `tests/bluetooth_status.cpp` reads Windows properties only.
 
 The 2.4 GHz battery protocol remains unresolved and active probes remain disabled.
+
+## Explicitly authorized limited receiver retry
+
+The user subsequently authorized a careful retry, with Bluetooth as fallback.
+This was a separate, isolated experiment, not a restoration of application polling.
+
+- Windows reported the Rainy Bluetooth link disconnected before the receiver test.
+- A 15-second listen opened only `320F:5088`, interface 2, vendor collection
+  `FF1C:0092`, using `GENERIC_READ`. It sent no commands and received no vendor
+  report 4 messages. No keyboard report payloads were recorded.
+- Descriptor inspection verified input/output report 4, both 64 bytes. Windows
+  describes both as button arrays on vendor page `FF1C`, usage range `00..FF`
+  (`BitField=0`); they are not `HIDP_VALUE_CAPS` entries.
+- Chromium's current `HidConnectionWin::PlatformWrite` uses `WriteFile`, matching
+  the application's transport. It does not use `HidD_SetOutputReport`.
+  [Chromium source](https://chromium.googlesource.com/chromium/src/+/main/services/device/hid/hid_connection_win.cc)
+- The isolated sender checked idle input, no held keys, unambiguous receiver
+  collection and report capabilities, waited five seconds, then transmitted
+  exactly one 64-byte output report: `04 20 00 1A 06`, zero padded.
+- It listened for 15 seconds. No valid battery reply arrived. No retransmits,
+  handshakes, settings writes, or alternative commands were attempted.
+- The sender closed and its executable was quarantined after the run. The main
+  application and its autostart were not modified.
+
+Keyboard input health still needs user confirmation; no lack-of-failure claim
+is inferred from a successful host write. Cable-mode descriptor inspection is
+the next requested user-assisted step. A USB battery response would help assess
+compatibility with WOB's declared wired protocol, but has not been obtained.
