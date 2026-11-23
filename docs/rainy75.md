@@ -95,3 +95,12 @@ under ignored `research/rainy-offline/`, not shipped with the application.
 - `legacy-app~918758ea.7850b4b2.js`: `0d6b75a7bfd70f82f14f8257b27c47590546a85931995f438be7e877d7db237c`
 - `legacy-app~5c551db8.a4721159.js`: `d6e20b08b08f4d189b4646cbd8c299978b5a78c0f79a106388eb08199d8c2003`
 - `legacy-app~648002f7.429d224b.js`: `6d16e54344b03d0eb6719d64a10bddddb510d5fb9d74c65c80ede69325eb1b7a`
+
+### Independent stock-firmware research
+
+The [Rainy 75 Pro reverse-engineering report](https://github.com/scholzri/rainy75-zmk/blob/cb4b7edeb9f8a6d4d81b48ddfb3b145a0a97cd5d/docs/protocols.md#hid-command-probe-results)
+reports a silent `FF1C` channel on its stock unit and distinguishes this firmware
+from the protocols exposed in WOB's driver. This is evidence from another unit,
+not an identification of the user's firmware. It supports avoiding an assumption
+that shared VID/PID and a request constant imply a functioning battery API.
+No existing verified battery response for the user's receiver has been obtained.
