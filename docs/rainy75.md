@@ -148,3 +148,20 @@ Keyboard input health still needs user confirmation; no lack-of-failure claim
 is inferred from a successful host write. Cable-mode descriptor inspection is
 the next requested user-assisted step. A USB battery response would help assess
 compatibility with WOB's declared wired protocol, but has not been obtained.
+
+## Cable enumeration confirmed
+
+After the user switched modes, the cable enumerated as `320F:5055`, product
+`Rainy 75`. Its `FF1C:0092` vendor collection is on interface 3 and declares
+8-byte input reports and 64-byte output reports. The receiver remains present
+separately as `320F:5088`, interface 2, with 64-byte input/output reports.
+
+The referenced Evision parser expects at least 10 bytes (percentage at offset 8
+and state at offset 9, including report ID). It cannot decode that layout from
+the cable's declared 8-byte input report. This rules out a direct reuse of that
+parser on this cable interface; it does not prove that all other commands or
+fragmented formats are impossible. No battery packet was sent to the cable.
+
+A descriptor-only inspector confirms report ID 4 on the cable's vendor input
+and output arrays. No input-report capture or output-report writes were used
+for this step. The installed application remains the working Bluetooth build.
