@@ -44,5 +44,22 @@ int main() {
     mouse.levelText = L"USB"; results = {mouse}; OnResults(results);
     assert(rendered[0].text == L"USB" && !rendered[0].dim);
     assert(StatusText(g_entries.at(mouse.key)) == L"USB");
+    // A single WLMouse identity updates in place on receiver -> cable -> receiver.
+    g_entries.clear();
+    mouse = {};
+    mouse.key = L"wlmouse:A882"; mouse.name = L"WLMouse Beast X";
+    mouse.kind = DeviceKind::Mouse; mouse.percent = 93; mouse.graceSec = 1800;
+    mouse.via = L"2.4 GHz receiver"; results = {mouse}; OnResults(results);
+    const auto receiverUid = g_entries.at(mouse.key).uid;
+    mouse.percent = 87; mouse.charging = true; mouse.via = L"USB cable";
+    results = {mouse}; OnResults(results);
+    assert(g_entries.size() == 1 && rendered.size() == 1 && rendered[0].percent == 87);
+    assert(g_entries.at(mouse.key).uid == receiverUid);
+    assert(StatusText(g_entries.at(mouse.key)) == L"87%, charging");
+    mouse.percent = 88; mouse.charging = false; mouse.via = L"2.4 GHz receiver";
+    results = {mouse}; OnResults(results);
+    assert(g_entries.size() == 1 && rendered.size() == 1 && rendered[0].percent == 88);
+    assert(g_entries.at(mouse.key).uid == receiverUid);
+    assert(StatusText(g_entries.at(mouse.key)) == L"88%");
     puts("Display state passed: cached level stays normal, explicit sleep dims, refresh recovers, expired entries disappear.");
 }

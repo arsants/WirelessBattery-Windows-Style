@@ -19,6 +19,7 @@ This project is a fork of **[krisgfx9/Wireless-Device-Battery-Monitor](https://g
 - A missed battery poll no longer invents an `asleep` state. Cached values remain marked `last known`; explicit driver sleep states still apply.
 - Lofree Flow Lite84 2.4 GHz support, including identification, online status, battery, charging and voltage, with reply/checksum validation.
 - AJAZZ AK820 Pro receiver/USB queries and Bluetooth name/icon normalization, with one stable entry across transports.
+- WLMouse Beast X battery/charging support, including the hardware-tested `36A7:A882` 1K receiver.
 - Production display-state and keyboard-driver regression tests, diagnostic tools and a taskbar preview renderer.
 
 Mouse, headset and controller battery protocols from upstream are retained. See the [archived upstream README](../UPSTREAM-README.md) for the inherited device list.
@@ -29,11 +30,14 @@ Mouse, headset and controller battery protocols from upstream are retained. See 
 |---|---|---|
 | Lofree Flow Lite84 | 2.4 GHz receiver | Real battery readings, 95–100% during verification; charging/voltage fields were also read. |
 | AJAZZ AK820 Pro | Bluetooth | Windows battery property, 61–62% during verification; correct name/icon and transport deduplication. |
+| WLMouse Beast X | 1K receiver `36A7:A882` | Real battery reading: 93%, not charging. |
 | Logitech MX Master 3S | Logitech receiver | Battery reading; false sleep display after missed polls fixed. |
 | Sony WH-1000XM4 | Bluetooth | Battery reading. |
 | Xbox Wireless Controller | Bluetooth | Battery display and custom gamepad icon. |
 
 **AJAZZ radio limitation:** the tested `0C45:FDFD` receiver responds but supplies no usable battery percentage. Its USB interface returns a special `FF` wired marker, shown as `USB`, never as an invented measured 100%. Use **Bluetooth** for a percentage on this unit. Other firmware revisions have not been verified.
+
+WLMouse support is adapted from the [updated upstream driver](https://github.com/notjiccu/wireless-device-battery-monitor/blob/79705baa15412ad1f96bd7c9d3798b5d981c0d2a/src/drivers/wlmouse.cpp). Other models in its table are not locally hardware-tested; original Beast X 4K IDs `A887` / `A888` are not supported by this protocol.
 
 Sleeping Lofree keyboards may need a keypress followed by **Refresh now**. After a successful reading, the existing 30-minute last-known-value cache applies when replies are missed.
 
